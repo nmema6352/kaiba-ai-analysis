@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>売上・在庫分析AI - Business Intelligence Platform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--gray-50);
+            color: var(--gray-900);
+            line-height: 1.6;
+        }
+
+        /* ヘッダー */
+        header {
+            background-color: white;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo svg {
+            width: 32px;
+            height: 32px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--gray-600);
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--primary-color);
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        /* メインコンテナ */
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* ダッシュボードヘッダー */
+        .dashboard-header {
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .dashboard-header p {
+            color: var(--gray-600);
+        }
+
+        /* フィルターセクション */
+        .filters-section {
+            background-color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        /* ボタンスタイル */
+        .btn {
+            padding: 0.5rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 0.875rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-secondary {
+            background-color: white;
+            color: var(--gray-700);
+            border: 1px solid var(--gray-300);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--gray-50);
+        }
+
+        /* ファイルアップロードセクション */
+        .upload-section {
+            background-color: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .upload-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .upload-header h2 {
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .upload-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .upload-card {
+            border: 2px dashed var(--gray-300);
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .upload-card:hover {
+            border-color: var(--primary-color);
+            background-color: var(--gray-50);
+        }
+
+        .upload-card.drag-over {
+            border-color: var(--primary-color);
+            background-color: rgba(37, 99, 235, 0.05);
+        }
+
+        .upload-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 1rem;
+            color: var(--gray-400);
+        }
+
+        .upload-card h3 {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-card p {
+            color: var(--gray-600);
+            font-size: 0.875rem;
+        }
+
+        /* データテーブル */
+        .data-section {
+            background-color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .data-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .data-header h2 {
+            font-size: 1.25rem;
+        }
+
+        .data-table {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background-color: var(--gray-50);
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 500;
+            font-size: 0.875rem;
+            color: var(--gray-700);
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        tr:hover {
+            background-color: var(--gray-50);
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-badge.success {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-badge.warning {
+            background-color: #fed7aa;
+            color: #92400e;
+        }
+
+        .status-badge.error {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* AI分析セクション */
+        .ai-section {
+            background-color: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .ai-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .ai-header h2 {
+            font-size: 1.5rem;
+        }
+
+        .ai-input-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .ai-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .ai-results {
+            background-color: var(--gray-50);
+            border-radius: 8px;
+            padding: 1.5rem;
+            min-height: 200px;
+        }
+
+        .ai-results.loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--gray-200);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .filters-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .upload-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .ai-input-group {
+                flex-direction: column;
+            }
+        }
+
+        /* アイコン用のSVG */
+        .icon {
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <!-- ヘッダー -->
+    <header>
+        <nav>
+            <div class="logo">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 13h18M3 17h18M8 7l4-4 4 4M12 3v13"></path>
+                </svg>
+                Business Intelligence AI
+            </div>
+            <ul class="nav-links">
+                <li><a href="#" class="active">ダッシュボード</a></li>
+                <li><a href="#">データ管理</a></li>
+                <li><a href="#">レポート</a></li>
+                <li><a href="#">設定</a></li>
+            </ul>
+            <div class="user-menu">
+                <button class="btn btn-secondary">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                    </svg>
+                </button>
+                <div class="avatar">TK</div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="container">
+        <!-- ダッシュボードヘッダー -->
+        <div class="dashboard-header">
+            <h1>売上・在庫分析ダッシュボード</h1>
+            <p>AIを活用した高度なビジネスインテリジェンス</p>
+        </div>
+
+        <!-- フィルターセクション -->
+        <section class="filters-section">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label for="company">法人</label>
+                    <select id="company">
+                        <option value="">すべての法人</option>
+                        <option value="company-a">法人A</option>
+                        <option value="company-b">法人B</option>
+                        <option value="company-c">法人C</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="period-start">期間（開始）</label>
+                    <input type="month" id="period-start" value="2024-01">
+                </div>
+                <div class="filter-group">
+                    <label for="period-end">期間（終了）</label>
+                    <input type="month" id="period-end" value="2024-12">
+                </div>
+                <div class="filter-group">
+                    <label for="area">エリア</label>
+                    <select id="area">
+                        <option value="">すべてのエリア</option>
+                        <option value="kanto">関東</option>
+                        <option value="kansai">関西</option>
+                        <option value="tohoku">東北</option>
+                        <option value="kyushu">九州</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-secondary">リセット</button>
+                <button class="btn btn-primary">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                    </svg>
+                    フィルター適用
+                </button>
+            </div>
+        </section>
+
+        <!-- ファイルアップロードセクション -->
+        <section class="upload-section">
+            <div class="upload-header">
+                <h2>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    ファイルアップロード
+                </h2>
+                <button class="btn btn-primary">一括アップロード</button>
+            </div>
+            <div class="upload-grid">
+                <div class="upload-card" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                    <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 17v-6m3 6v-6m3 6v-6m2 9H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <h3>売上データ</h3>
+                    <p>Excelファイルをドラッグ＆ドロップ<br>または クリックして選択</p>
+                </div>
+                <div class="upload-card" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                    <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                    </svg>
+                    <h3>在庫データ</h3>
+                    <p>Excelファイルをドラッグ＆ドロップ<br>または クリックして選択</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- アップロード済みファイル -->
+        <section class="data-section">
+            <div class="data-header">
+                <h2>アップロード済みファイル</h2>
+                <span style="color: var(--gray-600);">総ファイル数: 144</span>
+            </div>
+            <div class="data-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ファイル名</th>
+                            <th>タイプ</th>
+                            <th>法人</th>
+                            <th>期間</th>
+                            <th>アップロード日</th>
+                            <th>ステータス</th>
+                            <th>アクション</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>売上_法人A_202401.xlsx</td>
+                            <td>売上</td>
+                            <td>法人A</td>
+                            <td>2024年1月</td>
+                            <td>2024/01/15</td>
+                            <td><span class="status-badge success">処理完了</span></td>
+                            <td>
+                                <button class="btn btn-secondary" style="padding: 0.25rem 0.75rem;">詳細</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>在庫_法人B_202401.xlsx</td>
+                            <td>在庫</td>
+                            <td>法人B</td>
+                            <td>2024年1月</td>
+                            <td>2024/01/15</td>
+                            <td><span class="status-badge success">処理完了</span></td>
+                            <td>
+                                <button class="btn btn-secondary" style="padding: 0.25rem 0.75rem;">詳細</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>売上_法人C_202402.xlsx</td>
+                            <td>売上</td>
+                            <td>法人C</td>
+                            <td>2024年2月</td>
+                            <td>2024/02/10</td>
+                            <td><span class="status-badge warning">処理中</span></td>
+                            <td>
+                                <button class="btn btn-secondary" style="padding: 0.25rem 0.75rem;">詳細</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- AI分析セクション -->
+        <section class="ai-section">
+            <div class="ai-header">
+                <svg style="width: 32px; height: 32px; color: var(--primary-color);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.936-.382-1.794-1.056-2.468l-.548-.548z"></path>
+                </svg>
+                <h2>AI分析アシスタント</h2>
+            </div>
+            <div class="ai-input-group">
+                <input type="text" class="ai-input" placeholder="例：先月の売上トレンドを分析して改善策を提案してください">
+                <button class="btn btn-primary">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                    </svg>
+                    分析実行
+                </button>
+            </div>
+            <div class="ai-results">
+                <p style="color: var(--gray-500);">質問を入力してAI分析を開始してください。売上データ、在庫データ、トレンド分析、戦略立案など、様々な観点から分析が可能です。</p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // ドラッグ&ドロップ処理
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            console.log('Dropped files:', files);
+            // ここでファイルアップロード処理を実装
+        }
+
+        // ファイル選択
+        document.querySelectorAll('.upload-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.xlsx,.xls';
+                input.onchange = (e) => {
+                    const files = e.target.files;
+                    console.log('Selected files:', files);
+                    // ここでファイルアップロード処理を実装
+                };
+                input.click();
+            });
+        });
+
+        // AI分析実行
+        document.querySelector('.ai-input-group button').addEventListener('click', () => {
+            const input = document.querySelector('.ai-input');
+            const results = document.querySelector('.ai-results');
+            
+            if (input.value.trim()) {
+                results.classList.add('loading');
+                results.innerHTML = '<div class="spinner"></div>';
+                
+                // 実際のAPI呼び出しをここに実装
+                setTimeout(() => {
+                    results.classList.remove('loading');
+                    results.innerHTML = `
+                        <h3 style="margin-bottom: 1rem;">分析結果</h3>
+                        <p>質問: ${input.value}</p>
+                        <p style="margin-top: 1rem;">※ この部分にAIからの分析結果が表示されます。</p>
+                    `;
+                }, 2000);
+            }
+        });
+
+        // Enterキーで分析実行
+        document.querySelector('.ai-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.querySelector('.ai-input-group button').click();
+            }
+        });
+    </script>
+</body>
+</html>
