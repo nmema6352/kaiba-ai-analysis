@@ -1,35 +1,4 @@
-// ファイルをアップロード済みリストに追加
-        function addFileToTable(file, fileInfo) {
-            const tbody = document.querySelector('tbody');
-            const row = document.createElement('tr');
-            const uploadDate = new Date().toLocaleDateString('ja-JP').replace(/\//g, '/');
-            
-            row.innerHTML = `
-                <td>${file.name}</td>
-                <td>${fileInfo.type === '売上' ? '売上' : '在庫'}</td>
-                <td>${fileInfo.company}</td>
-                <td>${formatYearMonth(fileInfo.yearMonth)}</td>
-                <td>${uploadDate}</td>
-                <td><span class="status-badge success">処理完了</span></td>
-                <td>
-                    <button class="btn btn-secondary" style="padding: 0.25rem 0.75rem;" onclick="viewFileDetail(${fileIdCounter})">詳細</button>
-                </td>
-            `;
-            
-            tbody.appendChild(row);
-            
-            // ファイル情報を保存
-            uploadedFiles.push({
-                id: fileIdCounter++,
-                file: file,
-                info: fileInfo,
-                uploadDate: uploadDate,
-                status: 'completed'
-            });
-
-            // ファイル数を更新
-            updateFileCount();
-        }<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -444,6 +413,17 @@
             }
         }
 
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
         /* レスポンシブ */
         @media (max-width: 768px) {
             .nav-links {
@@ -473,6 +453,13 @@
             height: 20px;
             display: inline-block;
             vertical-align: middle;
+        }
+
+        /* 空のテーブルメッセージ */
+        .empty-message {
+            text-align: center;
+            padding: 3rem;
+            color: var(--gray-500);
         }
     </style>
 </head>
@@ -605,6 +592,9 @@
                         <!-- アップロードされたファイルがここに表示されます -->
                     </tbody>
                 </table>
+                <div class="empty-message" id="empty-message">
+                    <p>アップロードされたファイルはありません</p>
+                </div>
             </div>
         </section>
 
@@ -638,7 +628,6 @@
 
         // ファイル名から情報を抽出する関数
         function parseFileName(fileName) {
-            // 売上_法人A_202401.xlsx のようなフォーマットを想定
             const parts = fileName.replace('.xlsx', '').replace('.xls', '').split('_');
             if (parts.length >= 3) {
                 return {
@@ -660,9 +649,21 @@
             return yearMonth;
         }
 
+        // 空のメッセージの表示/非表示を切り替え
+        function toggleEmptyMessage() {
+            const emptyMessage = document.getElementById('empty-message');
+            const tbody = document.getElementById('file-table-body');
+            
+            if (tbody.children.length === 0) {
+                emptyMessage.style.display = 'block';
+            } else {
+                emptyMessage.style.display = 'none';
+            }
+        }
+
         // ファイルをアップロード済みリストに追加
         function addFileToTable(file, fileInfo) {
-            const tbody = document.querySelector('tbody');
+            const tbody = document.getElementById('file-table-body');
             const row = document.createElement('tr');
             const uploadDate = new Date().toLocaleDateString('ja-JP').replace(/\//g, '/');
             
@@ -691,6 +692,9 @@
 
             // ファイル数を更新
             updateFileCount();
+            
+            // 空のメッセージを非表示
+            toggleEmptyMessage();
         }
 
         // ファイル数を更新
@@ -715,14 +719,10 @@
                 return;
             }
 
-            // ここで実際のアップロード処理
-            // 今はローカルで処理をシミュレート
             try {
-                // ファイルを読み込み（実際にはGCPにアップロード）
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     console.log('ファイル読み込み完了:', file.name);
-                    // テーブルに追加
                     addFileToTable(file, fileInfo);
                     showNotification(`${file.name} のアップロードが完了しました`);
                 };
@@ -775,151 +775,3 @@
             
             for (let file of files) {
                 if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-                    processFile(file, type);
-                } else {
-                    showNotification(`${file.name} はExcelファイルではありません`, 'error');
-                }
-            }
-        }
-
-        // ファイル選択
-        document.querySelectorAll('.upload-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = '.xlsx,.xls';
-                input.multiple = true;
-                const type = card.querySelector('h3').textContent.includes('売上') ? 'sales' : 'inventory';
-                
-                input.onchange = (e) => {
-                    const files = e.target.files;
-                    for (let file of files) {
-                        processFile(file, type);
-                    }
-                };
-                input.click();
-            });
-        });
-
-        // 一括アップロード
-        document.querySelector('.upload-header button').addEventListener('click', () => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.xlsx,.xls';
-            input.multiple = true;
-            
-            input.onchange = (e) => {
-                const files = e.target.files;
-                for (let file of files) {
-                    const fileInfo = parseFileName(file.name);
-                    if (fileInfo) {
-                        const type = fileInfo.type === '売上' ? 'sales' : 'inventory';
-                        processFile(file, type);
-                    } else {
-                        showNotification(`${file.name} のファイル名形式が正しくありません`, 'error');
-                    }
-                }
-            };
-            input.click();
-        });
-
-        // ファイル詳細表示
-        function viewFileDetail(fileId) {
-            const fileData = uploadedFiles.find(f => f.id === fileId);
-            if (fileData) {
-                alert(`ファイル詳細:\n\nファイル名: ${fileData.file.name}\nサイズ: ${(fileData.file.size / 1024).toFixed(2)} KB\nアップロード日: ${fileData.uploadDate}`);
-            }
-        }
-
-        // フィルター適用
-        document.querySelector('.filter-actions .btn-primary').addEventListener('click', () => {
-            const company = document.getElementById('company').value;
-            const periodStart = document.getElementById('period-start').value;
-            const periodEnd = document.getElementById('period-end').value;
-            const area = document.getElementById('area').value;
-            
-            console.log('フィルター適用:', { company, periodStart, periodEnd, area });
-            showNotification('フィルターを適用しました');
-            
-            // ここでフィルタリング処理を実装
-            // uploadedFilesをフィルタリングして表示を更新
-        });
-
-        // フィルターリセット
-        document.querySelector('.filter-actions .btn-secondary').addEventListener('click', () => {
-            document.getElementById('company').value = '';
-            document.getElementById('period-start').value = '2024-01';
-            document.getElementById('period-end').value = '2024-12';
-            document.getElementById('area').value = '';
-            showNotification('フィルターをリセットしました');
-        });
-
-        // AI分析実行
-        document.querySelector('.ai-input-group button').addEventListener('click', async () => {
-            const input = document.querySelector('.ai-input');
-            const results = document.querySelector('.ai-results');
-            
-            if (input.value.trim()) {
-                results.classList.add('loading');
-                results.innerHTML = '<div class="spinner"></div>';
-                
-                try {
-                    // ここで実際のAPI呼び出し
-                    // const response = await fetch('YOUR_API_ENDPOINT', {
-                    //     method: 'POST',
-                    //     headers: { 'Content-Type': 'application/json' },
-                    //     body: JSON.stringify({ 
-                    //         query: input.value,
-                    //         files: uploadedFiles.map(f => f.info)
-                    //     })
-                    // });
-                    // const data = await response.json();
-                    
-                    // デモ用のレスポンス
-                    setTimeout(() => {
-                        results.classList.remove('loading');
-                        results.innerHTML = `
-                            <h3 style="margin-bottom: 1rem;">分析結果</h3>
-                            <div style="background-color: white; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
-                                <p style="font-weight: 600; margin-bottom: 0.5rem;">質問: ${input.value}</p>
-                                <p style="margin-top: 1rem; line-height: 1.8;">
-                                    アップロードされた${uploadedFiles.length}件のファイルを分析しました。
-                                    <br><br>
-                                    ※ GCP APIと接続後、ここにAIによる詳細な分析結果が表示されます。
-                                </p>
-                            </div>
-                        `;
-                        input.value = '';
-                    }, 2000);
-                } catch (error) {
-                    results.classList.remove('loading');
-                    results.innerHTML = `<p style="color: var(--danger-color);">エラーが発生しました: ${error.message}</p>`;
-                }
-            }
-        });
-
-        // Enterキーで分析実行
-        document.querySelector('.ai-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                document.querySelector('.ai-input-group button').click();
-            }
-        });
-
-        // アニメーション用CSS追加
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideIn {
-                from {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    </script>
-</body>
-</html>
